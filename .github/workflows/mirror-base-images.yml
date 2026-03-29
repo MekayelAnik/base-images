@@ -15,7 +15,6 @@ env:
     node:current-alpine,
     node:22-slim,
     node:22-alpine,
-    node:alpine,
     golang:1.26-alpine,
     alpine:latest,
     python:3-slim,
