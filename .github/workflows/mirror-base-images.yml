@@ -13,8 +13,8 @@ env:
   # Default images if BASE_IMAGES variable is not set
   DEFAULT_IMAGES: >-
     node:current-alpine,
+    node:current-slim,
     node:22-slim,
-    node:22-alpine,
     golang:1.26-alpine,
     alpine:latest,
     python:3-slim,
