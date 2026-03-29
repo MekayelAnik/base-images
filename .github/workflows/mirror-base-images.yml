@@ -32,6 +32,9 @@ jobs:
           - golang:1.26-alpine
           - alpine:latest
           - python:3-slim
+          - debian:bookworm-slim
+          - debian:trixie-slim
+          - debian:stable-slim
 
     steps:
       - name: Setup Buildx
