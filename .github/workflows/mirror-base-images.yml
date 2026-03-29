@@ -1,0 +1,55 @@
+name: Mirror Base Images to GHCR
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Weekly, Sunday 3am UTC
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Force re-mirror all images
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  packages: write
+
+env:
+  GHCR_PREFIX: ghcr.io/${{ github.repository_owner }}/base-images
+
+jobs:
+  mirror:
+    name: Mirror ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        image:
+          - node:current-alpine
+          - node:22-slim
+          - node:22-alpine
+          - golang:1.26-alpine
+          - alpine:latest
+          - python:3-slim
+
+    steps:
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Mirror ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          SOURCE="docker.io/library/${{ matrix.image }}"
+          TARGET="${GHCR_PREFIX}/${{ matrix.image }}"
+
+          echo "Mirroring $SOURCE -> $TARGET"
+          docker buildx imagetools create -t "$TARGET" "$SOURCE"
+          echo "Done: $TARGET"
