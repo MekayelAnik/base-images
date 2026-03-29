@@ -9,7 +9,7 @@ permissions:
   packages: write
 
 env:
-  GHCR_PREFIX: ghcr.io/${{ github.repository_owner }}/base-images
+  GHCR_OWNER: ${{ github.repository_owner }}
   # Default images if BASE_IMAGES variable is not set
   DEFAULT_IMAGES: >-
     node:current-alpine,
@@ -62,8 +62,9 @@ jobs:
       - name: Mirror ${{ matrix.image }}
         run: |
           set -euo pipefail
+          OWNER=$(echo "$GHCR_OWNER" | tr '[:upper:]' '[:lower:]')
           SOURCE="docker.io/library/${{ matrix.image }}"
-          TARGET="${GHCR_PREFIX}/${{ matrix.image }}"
+          TARGET="ghcr.io/${OWNER}/base-images/${{ matrix.image }}"
 
           echo "Mirroring $SOURCE -> $TARGET"
           docker buildx imagetools create -t "$TARGET" "$SOURCE"
