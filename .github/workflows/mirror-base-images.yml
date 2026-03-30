@@ -2,6 +2,12 @@ name: Mirror Base Images to GHCR
 
 on:
   workflow_dispatch:
+    inputs:
+      force_mirror:
+        description: 'Force mirror even if digests match'
+        required: false
+        type: boolean
+        default: false
   repository_dispatch:
     types: [mirror-base-images]
 
@@ -59,13 +65,61 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Mirror ${{ matrix.image }}
+      - name: Check digest and mirror ${{ matrix.image }}
+        id: mirror
         run: |
           set -euo pipefail
           OWNER=$(echo "$GHCR_OWNER" | tr '[:upper:]' '[:lower:]')
           SOURCE="docker.io/library/${{ matrix.image }}"
           TARGET="ghcr.io/${OWNER}/base-images/${{ matrix.image }}"
+          FORCE="${{ github.event.inputs.force_mirror || 'false' }}"
 
-          echo "Mirroring $SOURCE -> $TARGET"
-          docker buildx imagetools create -t "$TARGET" "$SOURCE"
-          echo "Done: $TARGET"
+          # Get source digest from Docker Hub
+          SOURCE_DIGEST=""
+          SOURCE_DIGEST=$(docker buildx imagetools inspect "$SOURCE" --raw 2>/dev/null | sha256sum | awk '{print "sha256:"$1}') || true
+
+          if [[ -z "$SOURCE_DIGEST" ]]; then
+            echo "::warning::Could not inspect source $SOURCE — mirroring unconditionally"
+            docker buildx imagetools create -t "$TARGET" "$SOURCE"
+            echo "status=mirrored" >> "$GITHUB_OUTPUT"
+            echo "reason=source-inspect-failed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Get target digest from GHCR (may not exist yet)
+          TARGET_DIGEST=""
+          TARGET_DIGEST=$(docker buildx imagetools inspect "$TARGET" --raw 2>/dev/null | sha256sum | awk '{print "sha256:"$1}') || true
+
+          echo "Source digest: ${SOURCE_DIGEST:0:26}..."
+          echo "Target digest: ${TARGET_DIGEST:0:26:-<not found>}..."
+
+          if [[ "$FORCE" != "true" && -n "$TARGET_DIGEST" && "$SOURCE_DIGEST" == "$TARGET_DIGEST" ]]; then
+            echo "Already up-to-date — skipping mirror"
+            echo "status=skipped" >> "$GITHUB_OUTPUT"
+            echo "reason=digest-match" >> "$GITHUB_OUTPUT"
+          else
+            REASON="new-image"
+            [[ "$FORCE" == "true" ]] && REASON="force-mirror"
+            [[ -n "$TARGET_DIGEST" && "$SOURCE_DIGEST" != "$TARGET_DIGEST" ]] && REASON="digest-changed"
+
+            echo "Mirroring $SOURCE -> $TARGET (reason: $REASON)"
+            docker buildx imagetools create -t "$TARGET" "$SOURCE"
+            echo "Done: $TARGET"
+            echo "status=mirrored" >> "$GITHUB_OUTPUT"
+            echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Job summary
+        if: always()
+        run: |
+          STATUS="${{ steps.mirror.outputs.status }}"
+          REASON="${{ steps.mirror.outputs.reason }}"
+          IMAGE="${{ matrix.image }}"
+
+          case "$STATUS" in
+            skipped)  ICON="⏭️"; DESC="Already up-to-date" ;;
+            mirrored) ICON="✅"; DESC="Mirrored ($REASON)" ;;
+            *)        ICON="❌"; DESC="Unknown status" ;;
+          esac
+
+          echo "| $ICON | \`$IMAGE\` | $DESC |" >> "$GITHUB_STEP_SUMMARY"
