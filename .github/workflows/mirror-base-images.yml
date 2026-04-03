@@ -13,6 +13,7 @@ on:
 
 permissions:
   packages: write
+  contents: write
 
 env:
   GHCR_OWNER: ${{ github.repository_owner }}
@@ -32,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      images_raw: ${{ steps.matrix.outputs.images_raw }}
     steps:
       - name: Build matrix from variable
         id: matrix
@@ -42,6 +44,7 @@ jobs:
           # Parse comma-separated list, trim whitespace, remove empties, build JSON array
           MATRIX=$(echo "$RAW" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | sed '/^$/d' | sort -u | jq -R '.' | jq -sc '{"image": .}')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "images_raw=$RAW" >> "$GITHUB_OUTPUT"
           echo "Images to mirror:"
           echo "$MATRIX" | jq -r '.image[]'
 
@@ -56,7 +59,7 @@ jobs:
 
     steps:
       - name: Setup Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to GHCR
         uses: docker/login-action@v4
@@ -123,3 +126,131 @@ jobs:
           esac
 
           echo "| $ICON | \`$IMAGE\` | $DESC |" >> "$GITHUB_STEP_SUMMARY"
+
+  update-readme:
+    name: Update README
+    runs-on: ubuntu-latest
+    needs: [prepare, mirror]
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Generate README
+        env:
+          RAW_IMAGES: ${{ needs.prepare.outputs.images_raw }}
+          GHCR_OWNER_RAW: ${{ github.repository_owner }}
+          REPO_FULL: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          OWNER=$(echo "$GHCR_OWNER_RAW" | tr '[:upper:]' '[:lower:]')
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+
+          # Known "Used By" mappings — update when downstream repos change base images
+          declare -A USED_BY=(
+            ["node:current-alpine"]="context7-mcp-docker"
+            ["node:current-slim"]="—"
+            ["node:22-slim"]="gitnexus-docker"
+            ["node:22-trixie-slim"]="gitnexus-docker"
+            ["node:22-alpine"]="—"
+            ["node:alpine"]="MCP docker repos (time, fetch, brave, etc.)"
+            ["golang:1.26-alpine"]="db-MCP-server-docker"
+            ["alpine:latest"]="nfs-server, samba-server, proftpd, db-MCP"
+            ["python:3-slim"]="codegraphcontext-mcp-docker"
+            ["debian:bookworm-slim"]="ispyagentdvr"
+            ["debian:trixie-slim"]="ispyagentdvr, vllm-cpu, gitnexus-docker"
+            ["debian:stable-slim"]="ispyagentdvr"
+          )
+
+          # Parse image list
+          IMAGES=$(echo "$RAW_IMAGES" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | sed '/^$/d' | sort -u)
+
+          # Build table rows
+          TABLE_ROWS=""
+          while IFS= read -r IMG; do
+            [[ -z "$IMG" ]] && continue
+            TARGET="ghcr.io/${OWNER}/base-images/${IMG}"
+
+            # Query architectures
+            ARCHS=""
+            ARCHS=$(docker buildx imagetools inspect "$TARGET" 2>/dev/null \
+              | grep -oP 'linux/\S+' | sort -u | paste -sd ', ' -) || true
+            [[ -z "$ARCHS" ]] && ARCHS="N/A"
+
+            # Determine status
+            if docker buildx imagetools inspect "$TARGET" &>/dev/null; then
+              STATUS="Mirrored"
+            else
+              STATUS="Not found"
+            fi
+
+            USED="${USED_BY[$IMG]:-—}"
+
+            TABLE_ROWS="${TABLE_ROWS}| \`${IMG}\` | \`${TARGET}\` | ${ARCHS} | ${USED} | ${STATUS} |"$'\n'
+          done <<< "$IMAGES"
+
+          # Write README
+          cat > README.md <<READMEEOF
+# Base Images Mirror
+
+[![Mirror Base Images to GHCR](https://github.com/${REPO_FULL}/actions/workflows/mirror-base-images.yml/badge.svg)](https://github.com/${REPO_FULL}/actions/workflows/mirror-base-images.yml)
+
+Centralized Docker base image mirror from Docker Hub to GitHub Container Registry (GHCR).
+
+## Purpose
+
+Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has unlimited pulls with \`GITHUB_TOKEN\` in GitHub Actions.
+
+## Mirrored Images
+
+> **Last synced:** ${TIMESTAMP}
+
+| Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status |
+|:-------------------|:------------|:--------------|:--------|:-------|
+${TABLE_ROWS}
+## Adding / Removing Images
+
+1. Go to **Settings > Variables > Actions** in this repo
+2. Edit the \`BASE_IMAGES\` variable (comma-separated list)
+3. Trigger the workflow — no code changes needed
+
+## Trigger
+
+- **cron-job.org**: POST to \`https://api.github.com/repos/${REPO_FULL}/dispatches\` with body \`{"event_type": "mirror-base-images"}\`
+- **Manual**: Actions > Mirror Base Images to GHCR > Run workflow
+
+## Usage in Other Repos
+
+Set \`BASE_IMAGE_DEFAULT\` variable in your repo:
+
+\`\`\`
+ghcr.io/${OWNER}/base-images/node:22-slim
+\`\`\`
+
+---
+
+*This README is auto-generated by the [mirror workflow](https://github.com/${REPO_FULL}/actions/workflows/mirror-base-images.yml). Do not edit manually.*
+READMEEOF
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: auto-update README with mirror status"
+            git push
+            echo "README updated and pushed."
+          else
+            echo "README unchanged — skipping commit."
+          fi
