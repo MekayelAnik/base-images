@@ -10,7 +10,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 
 ## Mirrored Images
 
-> **Last synced:** 2026-04-12 19:20 UTC
+> **Last synced:** 2026-04-12 19:36 UTC
 
 | Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status |
 |:-------------------|:------------|:--------------|:--------|:-------|
@@ -25,6 +25,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 | `node:current-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:current-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored |
 | `node:lts-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:lts-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored |
 | `python:3-slim` | `ghcr.io/mekayelanik/base-images/python:3-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | codegraphcontext-mcp-docker | Mirrored |
+| `rust:slim-trixie` | `ghcr.io/mekayelanik/base-images/rust:slim-trixie` | linux/386,linux/amd64 linux/arm/v7,linux/arm64/v8 linux/ppc64le,linux/riscv64 linux/s390x | — | Mirrored |
 
 ## Adding / Removing Images
 
