@@ -73,8 +73,15 @@ jobs:
         run: |
           set -euo pipefail
           OWNER=$(echo "$GHCR_OWNER" | tr '[:upper:]' '[:lower:]')
-          SOURCE="docker.io/library/${{ matrix.image }}"
-          TARGET="ghcr.io/${OWNER}/base-images/${{ matrix.image }}"
+          IMAGE="${{ matrix.image }}"
+          # Namespaced images (e.g. moby/buildkit) use docker.io/<image> directly;
+          # official library images (e.g. node, alpine) use docker.io/library/<image>
+          if [[ "$IMAGE" == */* ]]; then
+            SOURCE="docker.io/${IMAGE}"
+          else
+            SOURCE="docker.io/library/${IMAGE}"
+          fi
+          TARGET="ghcr.io/${OWNER}/base-images/${IMAGE}"
           FORCE="${{ github.event.inputs.force_mirror || 'false' }}"
 
           # Get source digest from Docker Hub
