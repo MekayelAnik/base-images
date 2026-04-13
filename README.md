@@ -10,7 +10,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 
 ## Mirrored Images
 
-> **Last synced:** 2026-04-13 21:10 UTC
+> **Last synced:** 2026-04-13 22:40 UTC
 
 | Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status |
 |:-------------------|:------------|:--------------|:--------|:-------|
@@ -19,7 +19,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 | `golang:alpine` | `ghcr.io/mekayelanik/base-images/golang:alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
 | `haproxy:lts` | `ghcr.io/mekayelanik/base-images/haproxy:lts` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
 | `haproxy:lts-alpine` | `ghcr.io/mekayelanik/base-images/haproxy:lts-alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
-| `moby/buildkit:master` | `ghcr.io/mekayelanik/base-images/moby/buildkit:master` | N/A | — | Not found |
+| `moby/buildkit:master` | `ghcr.io/mekayelanik/base-images/moby/buildkit:master` | linux/amd64,linux/arm/v7 linux/arm64,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
 | `node:22-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:22-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | gitnexus-docker | Mirrored |
 | `node:current-alpine` | `ghcr.io/mekayelanik/base-images/node:current-alpine` | linux/amd64,linux/arm64/v8 linux/s390x | context7-mcp-docker | Mirrored |
 | `node:current-slim` | `ghcr.io/mekayelanik/base-images/node:current-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored |
