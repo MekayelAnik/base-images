@@ -10,11 +10,11 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 
 ## Mirrored Images
 
-> **Last synced:** 2026-04-17 09:34 UTC
+> **Last synced:** 2026-04-17 10:34 UTC
 
 | Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status |
 |:-------------------|:------------|:--------------|:--------|:-------|
-| `alpine:latest` | `ghcr.io/mekayelanik/base-images/alpine:latest` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/docker-alpine.git#c68e08480b8fb053591ade7dbaffa2ea67db2f56:aarch64 linux/docker-alpine.git#c68e08480b8fb053591ade7dbaffa2ea67db2f56:armhf,linux/docker-alpine.git#c68e08480b8fb053591ade7dbaffa2ea67db2f56:armv7 linux/docker-alpine.git#c68e08480b8fb053591ade7dbaffa2ea67db2f56:ppc64le,linux/docker-alpine.git#c68e08480b8fb053591ade7dbaffa2ea67db2f56:riscv64 linux/docker-alpine.git#c68e08480b8fb053591ade7dbaffa2ea67db2f56:s390x,linux/docker-alpine.git#c68e08480b8fb053591ade7dbaffa2ea67db2f56:x86 linux/docker-alpine.git#c68e08480b8fb053591ade7dbaffa2ea67db2f56:x86_64,linux/ppc64le linux/riscv64,linux/s390x | nfs-server, samba-server, proftpd, db-MCP | Mirrored |
+| `alpine:latest` | `ghcr.io/mekayelanik/base-images/alpine:latest` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | nfs-server, samba-server, proftpd, db-MCP | Mirrored |
 | `debian:stable-slim` | `ghcr.io/mekayelanik/base-images/debian:stable-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | ispyagentdvr | Mirrored |
 | `golang:alpine` | `ghcr.io/mekayelanik/base-images/golang:alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
 | `haproxy:lts` | `ghcr.io/mekayelanik/base-images/haproxy:lts` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
