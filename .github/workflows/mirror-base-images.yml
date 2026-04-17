@@ -15,6 +15,10 @@ permissions:
   packages: write
   contents: write
 
+concurrency:
+  group: base-images-mirror-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   GHCR_OWNER: ${{ github.repository_owner }}
   # Default images if BASE_IMAGES variable is not set
@@ -101,7 +105,11 @@ jobs:
           TARGET_DIGEST=$(docker buildx imagetools inspect "$TARGET" --raw 2>/dev/null | sha256sum | awk '{print "sha256:"$1}') || true
 
           echo "Source digest: ${SOURCE_DIGEST:0:26}..."
-          echo "Target digest: ${TARGET_DIGEST:0:26:-<not found>}..."
+          if [[ -n "$TARGET_DIGEST" ]]; then
+            echo "Target digest: ${TARGET_DIGEST:0:26}..."
+          else
+            echo "Target digest: <not found>"
+          fi
 
           if [[ "$FORCE" != "true" && -n "$TARGET_DIGEST" && "$SOURCE_DIGEST" == "$TARGET_DIGEST" ]]; then
             echo "Already up-to-date — skipping mirror"
@@ -139,9 +147,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [prepare, mirror]
     if: always()
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v4
@@ -161,14 +173,36 @@ jobs:
         run: bash .github/scripts/generate-readme.sh
 
       - name: Commit and push if changed
+        shell: bash
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
-          if ! git diff --cached --quiet; then
-            git commit -m "docs: auto-update README with mirror status"
-            git push
-            echo "README updated and pushed."
-          else
+          if git diff --cached --quiet; then
             echo "README unchanged — skipping commit."
+            exit 0
           fi
+          git commit -m "docs: auto-update README with mirror status"
+
+          MAX_ATTEMPTS=5
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            if git push origin "HEAD:${BRANCH}"; then
+              echo "README pushed on attempt ${attempt}."
+              exit 0
+            fi
+            if [[ "$attempt" -eq "$MAX_ATTEMPTS" ]]; then
+              break
+            fi
+            echo "Push rejected on attempt ${attempt}; rebasing on origin/${BRANCH}..."
+            if ! git pull --rebase --autostash --strategy-option=theirs origin "${BRANCH}"; then
+              git rebase --abort >/dev/null 2>&1 || true
+              echo "::error::Rebase failed on attempt ${attempt}"
+              exit 1
+            fi
+            sleep "$(( (RANDOM % 4) + 2 ))"
+          done
+          echo "::error::Failed to push README after ${MAX_ATTEMPTS} attempts"
+          exit 1
