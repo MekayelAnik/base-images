@@ -34,10 +34,14 @@ while IFS= read -r IMG; do
   [[ -z "$IMG" ]] && continue
   TARGET="ghcr.io/${OWNER}/base-images/${IMG}"
 
-  # Query architectures
+  # Query architectures — anchor on "Platform:" label to avoid matching
+  # source/provenance annotations (e.g. alpine's "linux/docker-alpine.git#..." refs)
   ARCHS=""
   ARCHS=$(docker buildx imagetools inspect "$TARGET" 2>/dev/null \
-    | grep -oP 'linux/\S+' | sort -u | paste -sd ', ' -) || true
+    | awk '/^[[:space:]]*Platform:[[:space:]]/ {print $2}' \
+    | grep -E '^linux/' \
+    | grep -vE '/unknown$|^linux/unknown' \
+    | sort -u | paste -sd ', ' -) || true
   [[ -z "$ARCHS" ]] && ARCHS="N/A"
 
   # Determine status
