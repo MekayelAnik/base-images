@@ -10,23 +10,21 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 
 ## Mirrored Images
 
-> **Last synced:** 2026-04-18 16:34 UTC
-
-| Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status |
-|:-------------------|:------------|:--------------|:--------|:-------|
-| `alpine:latest` | `ghcr.io/mekayelanik/base-images/alpine:latest` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | nfs-server, samba-server, proftpd, db-MCP | Mirrored |
-| `debian:stable-slim` | `ghcr.io/mekayelanik/base-images/debian:stable-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | ispyagentdvr | Mirrored |
-| `golang:alpine` | `ghcr.io/mekayelanik/base-images/golang:alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
-| `haproxy:lts` | `ghcr.io/mekayelanik/base-images/haproxy:lts` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
-| `haproxy:lts-alpine` | `ghcr.io/mekayelanik/base-images/haproxy:lts-alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
-| `moby/buildkit:master` | `ghcr.io/mekayelanik/base-images/moby/buildkit:master` | linux/amd64,linux/arm/v7 linux/arm64,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored |
-| `node:22-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:22-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | gitnexus-docker | Mirrored |
-| `node:current-alpine` | `ghcr.io/mekayelanik/base-images/node:current-alpine` | linux/amd64,linux/arm64/v8 linux/s390x | context7-mcp-docker | Mirrored |
-| `node:current-slim` | `ghcr.io/mekayelanik/base-images/node:current-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored |
-| `node:current-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:current-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored |
-| `node:lts-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:lts-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored |
-| `python:3-slim` | `ghcr.io/mekayelanik/base-images/python:3-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | codegraphcontext-mcp-docker | Mirrored |
-| `rust:slim-trixie` | `ghcr.io/mekayelanik/base-images/rust:slim-trixie` | linux/386,linux/amd64 linux/arm/v7,linux/arm64/v8 linux/ppc64le,linux/riscv64 linux/s390x | — | Mirrored |
+| Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status | Last Updated |
+|:-------------------|:------------|:--------------|:--------|:-------|:-------------|
+| `alpine:latest` | `ghcr.io/mekayelanik/base-images/alpine:latest` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | nfs-server, samba-server, proftpd, db-MCP | Mirrored | 2026-04-18 17:34 UTC |
+| `debian:stable-slim` | `ghcr.io/mekayelanik/base-images/debian:stable-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | ispyagentdvr | Mirrored | 2026-04-18 17:34 UTC |
+| `golang:alpine` | `ghcr.io/mekayelanik/base-images/golang:alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
+| `haproxy:lts` | `ghcr.io/mekayelanik/base-images/haproxy:lts` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
+| `haproxy:lts-alpine` | `ghcr.io/mekayelanik/base-images/haproxy:lts-alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
+| `moby/buildkit:master` | `ghcr.io/mekayelanik/base-images/moby/buildkit:master` | linux/amd64,linux/arm/v7 linux/arm64,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
+| `node:22-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:22-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | gitnexus-docker | Mirrored | 2026-04-18 17:34 UTC |
+| `node:current-alpine` | `ghcr.io/mekayelanik/base-images/node:current-alpine` | linux/amd64,linux/arm64/v8 linux/s390x | context7-mcp-docker | Mirrored | 2026-04-18 17:34 UTC |
+| `node:current-slim` | `ghcr.io/mekayelanik/base-images/node:current-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
+| `node:current-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:current-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
+| `node:lts-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:lts-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
+| `python:3-slim` | `ghcr.io/mekayelanik/base-images/python:3-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | codegraphcontext-mcp-docker | Mirrored | 2026-04-18 17:34 UTC |
+| `rust:slim-trixie` | `ghcr.io/mekayelanik/base-images/rust:slim-trixie` | linux/386,linux/amd64 linux/arm/v7,linux/arm64/v8 linux/ppc64le,linux/riscv64 linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
 
 ## Adding / Removing Images
 
