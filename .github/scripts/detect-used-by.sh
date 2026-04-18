@@ -64,8 +64,9 @@ while IFS=$'\t' read -r REPO PATHF; do
       MAP["$IMG"]="${existing}, ${REPO_NAME}"
     fi
   done < <(echo "$CONTENT" \
-    | grep -oE "ghcr\.io/${OWNER_LC}/base-images/[^[:space:]\"'\\\\\\\$#}]+" \
+    | grep -oE "ghcr\.io/${OWNER_LC}/base-images/[a-zA-Z0-9._/:@-]+" \
     | sed "s|ghcr\.io/${OWNER_LC}/base-images/||" \
+    | sed 's/@sha256:.*$//' \
     | sort -u)
 done <<< "$PAIRS"
 
