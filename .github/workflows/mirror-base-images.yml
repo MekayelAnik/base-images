@@ -115,8 +115,10 @@ jobs:
           if [[ -z "$SOURCE_DIGEST" ]]; then
             echo "::warning::Could not inspect source $SOURCE — mirroring unconditionally"
             mirror_with_retry "$SOURCE" "$TARGET"
+            MIRROR_TS=$(date -u '+%Y-%m-%d %H:%M UTC')
             echo "status=mirrored" >> "$GITHUB_OUTPUT"
             echo "reason=source-inspect-failed" >> "$GITHUB_OUTPUT"
+            echo "timestamp=$MIRROR_TS" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -142,9 +144,11 @@ jobs:
 
             echo "Mirroring $SOURCE -> $TARGET (reason: $REASON)"
             mirror_with_retry "$SOURCE" "$TARGET"
-            echo "Done: $TARGET"
+            MIRROR_TS=$(date -u '+%Y-%m-%d %H:%M UTC')
+            echo "Done: $TARGET at $MIRROR_TS"
             echo "status=mirrored" >> "$GITHUB_OUTPUT"
             echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+            echo "timestamp=$MIRROR_TS" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Job summary
@@ -168,12 +172,13 @@ jobs:
         run: |
           set -euo pipefail
           STATUS="${{ steps.mirror.outputs.status }}"
+          TS="${{ steps.mirror.outputs.timestamp }}"
           IMAGE="${{ matrix.image }}"
           [[ -z "$STATUS" ]] && STATUS="unknown"
           mkdir -p status-out
           # Sanitize image name for filename: / and : -> __
           SAFE=$(echo "$IMAGE" | sed 's#[/:]#__#g')
-          printf '%s|%s\n' "$IMAGE" "$STATUS" > "status-out/${SAFE}.txt"
+          printf '%s|%s|%s\n' "$IMAGE" "$STATUS" "$TS" > "status-out/${SAFE}.txt"
 
       - name: Upload status artifact
         if: always()

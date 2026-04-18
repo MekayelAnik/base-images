@@ -47,14 +47,17 @@ if [[ -f README.md ]]; then
   done < README.md
 fi
 
-# Load per-image run status (mirrored | skipped | unknown) from artifact dir
+# Load per-image run status (mirrored | skipped | unknown) + mirror timestamp
+# from artifact dir. Each artifact file is a single line: image|status|timestamp
 declare -A RUN_STATUS=()
+declare -A RUN_TIMESTAMP=()
 if [[ -n "$STATUS_DIR" && -d "$STATUS_DIR" ]]; then
   shopt -s nullglob
   for f in "$STATUS_DIR"/*.txt; do
-    IFS='|' read -r img st < "$f" || continue
+    IFS='|' read -r img st ts < "$f" || continue
     [[ -n "${img:-}" ]] || continue
     RUN_STATUS["$img"]="${st:-unknown}"
+    [[ -n "${ts:-}" ]] && RUN_TIMESTAMP["$img"]="$ts"
   done
   shopt -u nullglob
 fi
@@ -90,13 +93,14 @@ while IFS= read -r IMG; do
   [[ -z "$USED" ]] && USED="—"
 
   # Determine Last Updated:
-  #   mirrored this run -> NOW
+  #   mirrored this run -> per-job completion timestamp (fall back to NOW)
   #   else preserve prior value from README
   #   else baseline: NOW if image exists in registry, else "—"
   PRIOR="${PRIOR_UPDATED[$IMG]:-}"
   THIS_RUN="${RUN_STATUS[$IMG]:-}"
+  THIS_TS="${RUN_TIMESTAMP[$IMG]:-}"
   if [[ "$THIS_RUN" == "mirrored" ]]; then
-    LAST_UPDATED="$NOW"
+    LAST_UPDATED="${THIS_TS:-$NOW}"
   elif [[ -n "$PRIOR" && "$PRIOR" != "—" ]]; then
     LAST_UPDATED="$PRIOR"
   elif [[ "$STATUS" == "Mirrored" ]]; then
