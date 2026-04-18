@@ -11,7 +11,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 ## Mirrored Images
 
 | Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status | Last Updated |
-|:-------------------|:------------|:--------------|:--------|:-------|:-------------|
+|:-------------------:|:-----------:|:-------------:|:-------:|:------:|:------------:|
 | `alpine:latest` | `ghcr.io/mekayelanik/base-images/alpine:latest` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | nfs-server, samba-server, proftpd, db-MCP | Mirrored | 2026-04-18 17:34 UTC |
 | `debian:stable-slim` | `ghcr.io/mekayelanik/base-images/debian:stable-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | ispyagentdvr | Mirrored | 2026-04-18 17:34 UTC |
 | `golang:alpine` | `ghcr.io/mekayelanik/base-images/golang:alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored | 2026-04-18 17:34 UTC |
