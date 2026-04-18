@@ -5,9 +5,10 @@ set -euo pipefail
 RAW_IMAGES="${RAW_IMAGES:?RAW_IMAGES is required}"
 GHCR_OWNER_RAW="${GHCR_OWNER_RAW:?GHCR_OWNER_RAW is required}"
 REPO_FULL="${REPO_FULL:?REPO_FULL is required}"
+STATUS_DIR="${STATUS_DIR:-}"
 
 OWNER=$(echo "$GHCR_OWNER_RAW" | tr '[:upper:]' '[:lower:]')
-TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+NOW=$(date -u '+%Y-%m-%d %H:%M UTC')
 
 # Known "Used By" mappings — update when downstream repos change base images
 declare -A USED_BY=(
@@ -25,6 +26,32 @@ declare -A USED_BY=(
   ["debian:stable-slim"]="ispyagentdvr"
 )
 
+# Parse existing README to preserve prior "Last Updated" values.
+# New format row has 7 pipes: | `img` | `target` | archs | used | status | last_updated |
+declare -A PRIOR_UPDATED=()
+if [[ -f README.md ]]; then
+  while IFS= read -r line; do
+    [[ "$line" =~ ^\|[[:space:]]*\`([^\`]+)\`[[:space:]]*\| ]] || continue
+    IMG_KEY="${BASH_REMATCH[1]}"
+    NPIPES=$(awk -F'|' '{print NF-1}' <<< "$line")
+    [[ "$NPIPES" -ge 7 ]] || continue
+    LAST=$(awk -F'|' '{v=$7; gsub(/^[[:space:]]+|[[:space:]]+$/,"",v); print v}' <<< "$line")
+    PRIOR_UPDATED["$IMG_KEY"]="$LAST"
+  done < README.md
+fi
+
+# Load per-image run status (mirrored | skipped | unknown) from artifact dir
+declare -A RUN_STATUS=()
+if [[ -n "$STATUS_DIR" && -d "$STATUS_DIR" ]]; then
+  shopt -s nullglob
+  for f in "$STATUS_DIR"/*.txt; do
+    IFS='|' read -r img st < "$f" || continue
+    [[ -n "${img:-}" ]] || continue
+    RUN_STATUS["$img"]="${st:-unknown}"
+  done
+  shopt -u nullglob
+fi
+
 # Parse image list
 IMAGES=$(echo "$RAW_IMAGES" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | sed '/^$/d' | sort -u)
 
@@ -34,8 +61,7 @@ while IFS= read -r IMG; do
   [[ -z "$IMG" ]] && continue
   TARGET="ghcr.io/${OWNER}/base-images/${IMG}"
 
-  # Query architectures — anchor on "Platform:" label to avoid matching
-  # source/provenance annotations (e.g. alpine's "linux/docker-alpine.git#..." refs)
+  # Query architectures — anchor on "Platform:" label
   ARCHS=""
   ARCHS=$(docker buildx imagetools inspect "$TARGET" 2>/dev/null \
     | awk '/^[[:space:]]*Platform:[[:space:]]/ {print $2}' \
@@ -54,10 +80,26 @@ while IFS= read -r IMG; do
   USED="${USED_BY[$IMG]:-}"
   [[ -z "$USED" ]] && USED="—"
 
-  TABLE_ROWS+="| \`${IMG}\` | \`${TARGET}\` | ${ARCHS} | ${USED} | ${STATUS} |"$'\n'
+  # Determine Last Updated:
+  #   mirrored this run -> NOW
+  #   else preserve prior value from README
+  #   else baseline: NOW if image exists in registry, else "—"
+  PRIOR="${PRIOR_UPDATED[$IMG]:-}"
+  THIS_RUN="${RUN_STATUS[$IMG]:-}"
+  if [[ "$THIS_RUN" == "mirrored" ]]; then
+    LAST_UPDATED="$NOW"
+  elif [[ -n "$PRIOR" && "$PRIOR" != "—" ]]; then
+    LAST_UPDATED="$PRIOR"
+  elif [[ "$STATUS" == "Mirrored" ]]; then
+    LAST_UPDATED="$NOW"
+  else
+    LAST_UPDATED="—"
+  fi
+
+  TABLE_ROWS+="| \`${IMG}\` | \`${TARGET}\` | ${ARCHS} | ${USED} | ${STATUS} | ${LAST_UPDATED} |"$'\n'
 done <<< "$IMAGES"
 
-# Write README
+# Write README (no global "Last synced" — each row tracks its own update time)
 cat > README.md <<EOF
 # Base Images Mirror
 
@@ -71,10 +113,8 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 
 ## Mirrored Images
 
-> **Last synced:** ${TIMESTAMP}
-
-| Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status |
-|:-------------------|:------------|:--------------|:--------|:-------|
+| Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status | Last Updated |
+|:-------------------|:------------|:--------------|:--------|:-------|:-------------|
 ${TABLE_ROWS}
 ## Adding / Removing Images
 

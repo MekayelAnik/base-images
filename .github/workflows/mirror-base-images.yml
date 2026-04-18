@@ -88,13 +88,33 @@ jobs:
           TARGET="ghcr.io/${OWNER}/base-images/${IMAGE}"
           FORCE="${{ github.event.inputs.force_mirror || 'false' }}"
 
+          # Retry wrapper — transient HTTP/2 stream errors and registry 5xx
+          # frequently break a single copy. Exponential backoff over 5 attempts.
+          mirror_with_retry() {
+            local src="$1" tgt="$2"
+            local attempts=5 delay=5
+            for attempt in $(seq 1 "$attempts"); do
+              if docker buildx imagetools create -t "$tgt" "$src"; then
+                [[ "$attempt" -gt 1 ]] && echo "Succeeded on attempt ${attempt}"
+                return 0
+              fi
+              if [[ "$attempt" -eq "$attempts" ]]; then
+                echo "::error::mirror failed after ${attempts} attempts: $src -> $tgt"
+                return 1
+              fi
+              echo "::warning::mirror attempt ${attempt} failed — retrying in ${delay}s"
+              sleep "$delay"
+              delay=$(( delay * 2 ))
+            done
+          }
+
           # Get source digest from Docker Hub
           SOURCE_DIGEST=""
           SOURCE_DIGEST=$(docker buildx imagetools inspect "$SOURCE" --raw 2>/dev/null | sha256sum | awk '{print "sha256:"$1}') || true
 
           if [[ -z "$SOURCE_DIGEST" ]]; then
             echo "::warning::Could not inspect source $SOURCE — mirroring unconditionally"
-            docker buildx imagetools create -t "$TARGET" "$SOURCE"
+            mirror_with_retry "$SOURCE" "$TARGET"
             echo "status=mirrored" >> "$GITHUB_OUTPUT"
             echo "reason=source-inspect-failed" >> "$GITHUB_OUTPUT"
             exit 0
@@ -121,7 +141,7 @@ jobs:
             [[ -n "$TARGET_DIGEST" && "$SOURCE_DIGEST" != "$TARGET_DIGEST" ]] && REASON="digest-changed"
 
             echo "Mirroring $SOURCE -> $TARGET (reason: $REASON)"
-            docker buildx imagetools create -t "$TARGET" "$SOURCE"
+            mirror_with_retry "$SOURCE" "$TARGET"
             echo "Done: $TARGET"
             echo "status=mirrored" >> "$GITHUB_OUTPUT"
             echo "reason=$REASON" >> "$GITHUB_OUTPUT"
@@ -141,6 +161,28 @@ jobs:
           esac
 
           echo "| $ICON | \`$IMAGE\` | $DESC |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write per-image status artifact
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATUS="${{ steps.mirror.outputs.status }}"
+          IMAGE="${{ matrix.image }}"
+          [[ -z "$STATUS" ]] && STATUS="unknown"
+          mkdir -p status-out
+          # Sanitize image name for filename: / and : -> __
+          SAFE=$(echo "$IMAGE" | sed 's#[/:]#__#g')
+          printf '%s|%s\n' "$IMAGE" "$STATUS" > "status-out/${SAFE}.txt"
+
+      - name: Upload status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirror-status-${{ strategy.job-index }}
+          path: status-out/
+          retention-days: 1
+          if-no-files-found: ignore
 
   update-readme:
     name: Update README
@@ -165,11 +207,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
+      - name: Download mirror status artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: mirror-status
+          pattern: mirror-status-*
+          merge-multiple: true
+
       - name: Generate README
         env:
           RAW_IMAGES: ${{ needs.prepare.outputs.images_raw }}
           GHCR_OWNER_RAW: ${{ github.repository_owner }}
           REPO_FULL: ${{ github.repository }}
+          STATUS_DIR: mirror-status
         run: bash .github/scripts/generate-readme.sh
 
       - name: Commit and push if changed
