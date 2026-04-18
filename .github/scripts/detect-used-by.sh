@@ -73,6 +73,36 @@ while IFS=$'\t' read -r REPO PATHF; do
     | sort -u)
 done <<< "$PAIRS"
 
+# --- Optional enrichment: scan repo Actions variables ---
+# Catches BASE_IMAGE_DEFAULT-style vars referencing the base-images registry.
+# Requires a PAT with actions:read on target repos; default GITHUB_TOKEN is
+# scoped to the current repo only and will 403 elsewhere. Fail-soft per repo.
+PREFIX="ghcr.io/${OWNER_LC}/base-images/"
+REPOS_JSON=$(gh api "users/${OWNER_RAW}/repos?type=owner&per_page=100" --paginate 2>/dev/null || echo '[]')
+REPO_LIST=$(echo "$REPOS_JSON" | jq -r '.[]? | select(.archived==false and .fork==false) | .full_name' 2>/dev/null || true)
+
+VAR_HITS=0
+while IFS= read -r REPO; do
+  [[ -z "$REPO" ]] && continue
+  [[ "${REPO,,}" == "${OWNER_LC}/base-images" ]] && continue
+  VARS_JSON=$(gh api "repos/${REPO}/actions/variables" --paginate 2>/dev/null || true)
+  [[ -z "$VARS_JSON" ]] && continue
+  REPO_NAME="${REPO##*/}"
+  while IFS= read -r VAL; do
+    [[ -z "$VAL" ]] && continue
+    IMG="${VAL#${PREFIX}}"
+    [[ "$IMG" == "$VAL" ]] && continue
+    VAR_HITS=$((VAR_HITS + 1))
+    existing="${MAP[$IMG]:-}"
+    if [[ -z "$existing" ]]; then
+      MAP["$IMG"]="$REPO_NAME"
+    elif [[ ",${existing// /}," != *",${REPO_NAME},"* ]]; then
+      MAP["$IMG"]="${existing}, ${REPO_NAME}"
+    fi
+  done < <(echo "$VARS_JSON" | jq -r --arg prefix "$PREFIX" '.variables[]? | select((.value | tostring) | startswith($prefix)) | .value' 2>/dev/null)
+done <<< "$REPO_LIST"
+echo "Actions variables matches: ${VAR_HITS}"
+
 for img in "${!MAP[@]}"; do
   printf '%s\t%s\n' "$img" "${MAP[$img]}" >> "$OUT"
 done
