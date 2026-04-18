@@ -35,16 +35,12 @@ RESULTS=$(gh search code "$QUERY" \
   2>/dev/null || echo '[]')
 
 COUNT=$(echo "$RESULTS" | jq 'length')
-echo "Hits: ${COUNT}"
-if [[ "$COUNT" -eq 0 ]]; then
-  echo "No hits — leaving ${OUT} empty"
-  exit 0
-fi
+echo "Code search hits: ${COUNT}"
 
 declare -A MAP=()
 
 # De-dupe (repo, path) pairs — gh may return multi-match lines per file.
-PAIRS=$(echo "$RESULTS" | jq -r '.[] | [.repository.nameWithOwner, .path] | @tsv' | sort -u)
+PAIRS=$(echo "$RESULTS" | jq -r '.[]? | [.repository.nameWithOwner, .path] | @tsv' | sort -u)
 
 while IFS=$'\t' read -r REPO PATHF; do
   [[ -z "${REPO:-}" || -z "${PATHF:-}" ]] && continue
@@ -99,7 +95,10 @@ while IFS= read -r REPO; do
     elif [[ ",${existing// /}," != *",${REPO_NAME},"* ]]; then
       MAP["$IMG"]="${existing}, ${REPO_NAME}"
     fi
-  done < <(echo "$VARS_JSON" | jq -r --arg prefix "$PREFIX" '.variables[]? | select((.value | tostring) | startswith($prefix)) | .value' 2>/dev/null)
+  done < <(echo "$VARS_JSON" | jq -r --arg prefix "$PREFIX" '
+    .variables[]?
+    | select((.name | test("IMAGE"; "i")) and ((.value | tostring) | startswith($prefix)))
+    | .value' 2>/dev/null)
 done <<< "$REPO_LIST"
 echo "Actions variables matches: ${VAR_HITS}"
 
