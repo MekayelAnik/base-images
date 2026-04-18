@@ -10,13 +10,11 @@ STATUS_DIR="${STATUS_DIR:-}"
 OWNER=$(echo "$GHCR_OWNER_RAW" | tr '[:upper:]' '[:lower:]')
 NOW=$(date -u '+%Y-%m-%d %H:%M UTC')
 
-# Known "Used By" mappings — update when downstream repos change base images
-declare -A USED_BY=(
+# Hardcoded fallback — only used if detection (USED_BY_FILE) returns nothing for an image.
+declare -A USED_BY_FALLBACK=(
   ["node:current-alpine"]="context7-mcp-docker"
-  ["node:current-slim"]=""
   ["node:22-slim"]="gitnexus-docker"
   ["node:22-trixie-slim"]="gitnexus-docker"
-  ["node:22-alpine"]=""
   ["node:alpine"]="MCP docker repos (time, fetch, brave, etc.)"
   ["golang:1.26-alpine"]="db-MCP-server-docker"
   ["alpine:latest"]="nfs-server, samba-server, proftpd, db-MCP"
@@ -25,6 +23,15 @@ declare -A USED_BY=(
   ["debian:trixie-slim"]="ispyagentdvr, vllm-cpu, gitnexus-docker"
   ["debian:stable-slim"]="ispyagentdvr"
 )
+
+# Detected Used By from scanning the owner's public repos (optional).
+declare -A USED_BY_DETECTED=()
+if [[ -n "${USED_BY_FILE:-}" && -f "${USED_BY_FILE}" ]]; then
+  while IFS=$'\t' read -r img repos; do
+    [[ -z "${img:-}" || -z "${repos:-}" ]] && continue
+    USED_BY_DETECTED["$img"]="$repos"
+  done < "$USED_BY_FILE"
+fi
 
 # Parse existing README to preserve prior "Last Updated" values.
 # New format row has 7 pipes: | `img` | `target` | archs | used | status | last_updated |
@@ -77,7 +84,9 @@ while IFS= read -r IMG; do
     STATUS="Not found"
   fi
 
-  USED="${USED_BY[$IMG]:-}"
+  # Prefer auto-detected, fall back to hardcoded map, then em-dash.
+  USED="${USED_BY_DETECTED[$IMG]:-}"
+  [[ -z "$USED" ]] && USED="${USED_BY_FALLBACK[$IMG]:-}"
   [[ -z "$USED" ]] && USED="—"
 
   # Determine Last Updated:
@@ -114,7 +123,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 ## Mirrored Images
 
 | Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status | Last Updated |
-|:-------------------|:------------|:--------------|:--------|:-------|:-------------|
+|:-------------------:|:-----------:|:-------------:|:-------:|:------:|:------------:|
 ${TABLE_ROWS}
 ## Adding / Removing Images
 

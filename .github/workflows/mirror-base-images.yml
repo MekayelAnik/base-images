@@ -214,12 +214,21 @@ jobs:
           pattern: mirror-status-*
           merge-multiple: true
 
+      - name: Detect "Used By" from public repos
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.USED_BY_SCAN_TOKEN || github.token }}
+          OWNER: ${{ github.repository_owner }}
+          OUT: used-by.tsv
+        run: bash .github/scripts/detect-used-by.sh
+
       - name: Generate README
         env:
           RAW_IMAGES: ${{ needs.prepare.outputs.images_raw }}
           GHCR_OWNER_RAW: ${{ github.repository_owner }}
           REPO_FULL: ${{ github.repository }}
           STATUS_DIR: mirror-status
+          USED_BY_FILE: used-by.tsv
         run: bash .github/scripts/generate-readme.sh
 
       - name: Commit and push if changed
