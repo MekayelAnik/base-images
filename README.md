@@ -10,7 +10,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 
 ## Mirrored Images
 
-> **Last synced:** 2026-04-18 13:34 UTC
+> **Last synced:** 2026-04-18 14:34 UTC
 
 | Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status |
 |:-------------------|:------------|:--------------|:--------|:-------|
