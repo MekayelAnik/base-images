@@ -222,7 +222,7 @@ jobs:
       - name: Detect "Used By" from public repos
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.USED_BY_SCAN_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT_READ_VARS || github.token }}
           OWNER: ${{ github.repository_owner }}
           OUT: used-by.tsv
         run: bash .github/scripts/detect-used-by.sh
