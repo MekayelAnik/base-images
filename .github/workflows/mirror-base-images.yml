@@ -191,7 +191,7 @@ jobs:
 
       - name: Upload status artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mirror-status-${{ strategy.job-index }}
           path: status-out/
@@ -231,7 +231,7 @@ jobs:
               --username "$REG_USER" --password-stdin
 
       - name: Download mirror status artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: mirror-status
           pattern: mirror-status-*
