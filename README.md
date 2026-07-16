@@ -28,7 +28,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 | `python:3.13-alpine` | `ghcr.io/mekayelanik/base-images/python:3.13-alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | semgrep-mcp-docker | Mirrored | 2026-06-18 11:33 UTC |
 | `python:3.14-alpine` | `ghcr.io/mekayelanik/base-images/python:3.14-alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | pypi-query-mcp-server-docker | Mirrored | 2026-06-18 11:33 UTC |
 | `python:3.14-slim` | `ghcr.io/mekayelanik/base-images/python:3.14-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | — | Mirrored | 2026-07-14 08:33 UTC |
-| `rust:slim-trixie` | `ghcr.io/mekayelanik/base-images/rust:slim-trixie` | linux/386,linux/amd64 linux/arm/v7,linux/arm64/v8 linux/ppc64le,linux/riscv64 linux/s390x | narsil-mcp-docker | Mirrored | 2026-07-14 11:33 UTC |
+| `rust:slim-trixie` | `ghcr.io/mekayelanik/base-images/rust:slim-trixie` | linux/386,linux/amd64 linux/arm/v7,linux/arm64/v8 linux/ppc64le,linux/riscv64 linux/s390x | narsil-mcp-docker | Mirrored | 2026-07-16 14:33 UTC |
 | `tonistiigi/xx:master` | `ghcr.io/mekayelanik/base-images/tonistiigi/xx:master` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v6 linux/arm/v7,linux/arm64 linux/loong64,linux/mips linux/mips64,linux/mips64le linux/mipsle,linux/ppc64le linux/riscv64,linux/s390x | db-mcp-server-docker | Mirrored | 2026-07-14 15:33 UTC |
 
 ## Adding / Removing Images
