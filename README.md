@@ -12,7 +12,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 
 | Source (Docker Hub) | GHCR Mirror | Architectures | Used By | Status | Last Updated |
 |:-------------------:|:-----------:|:-------------:|:-------:|:------:|:------------:|
-| `alpine:edge` | `ghcr.io/mekayelanik/base-images/alpine:edge` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | nfs-server-alpine, proftpd-server-alpine, samba-server-alpine | Mirrored | 2026-06-10 08:33 UTC |
+| `alpine:edge` | `ghcr.io/mekayelanik/base-images/alpine:edge` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | nfs-server-alpine, proftpd-server-alpine, samba-server-alpine | Mirrored | 2026-08-06 23:01 UTC |
 | `alpine:latest` | `ghcr.io/mekayelanik/base-images/alpine:latest` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | db-mcp-server-docker | Mirrored | 2026-06-16 08:33 UTC |
 | `debian:stable-slim` | `ghcr.io/mekayelanik/base-images/debian:stable-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | ispyagentdvr-base-image, vllm-cpu | Mirrored | 2026-08-05 02:33 UTC |
 | `golang:alpine` | `ghcr.io/mekayelanik/base-images/golang:alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | db-mcp-server-docker | Mirrored | 2026-07-08 22:33 UTC |
