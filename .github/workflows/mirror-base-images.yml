@@ -32,178 +32,13 @@ env:
     debian:stable-slim
 
 jobs:
-  prepare:
-    name: Prepare image matrix
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
-      images_raw: ${{ steps.matrix.outputs.images_raw }}
-    steps:
-      - name: Build matrix from variable
-        id: matrix
-        shell: bash
-        run: |
-          set -euo pipefail
-          RAW="${{ vars.BASE_IMAGES || env.DEFAULT_IMAGES }}"
-          # Parse comma-separated list, trim whitespace, remove empties, build JSON array
-          MATRIX=$(echo "$RAW" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | sed '/^$/d' | sort -u | jq -R '.' | jq -sc '{"image": .}')
-          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
-          echo "images_raw=$RAW" >> "$GITHUB_OUTPUT"
-          echo "Images to mirror:"
-          echo "$MATRIX" | jq -r '.image[]'
-
   mirror:
-    name: Mirror ${{ matrix.image }}
+    name: Mirror base images
     runs-on: ubuntu-latest
-    needs: [prepare]
-    strategy:
-      fail-fast: false
-      max-parallel: 20
-      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
-
-    steps:
-      - name: Setup Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to GHCR (with retry)
-        uses: nick-fields/retry@v4
-        env:
-          REG_USER: ${{ github.actor }}
-          REG_TOKEN: ${{ github.token }}
-        with:
-          timeout_seconds: 30
-          max_attempts: 5
-          retry_wait_seconds: 2
-          warning_on_retry: true
-          shell: bash
-          command: |
-            set -euo pipefail
-            printf '%s' "$REG_TOKEN" | docker login ghcr.io \
-              --username "$REG_USER" --password-stdin
-
-      - name: Check digest and mirror ${{ matrix.image }}
-        id: mirror
-        run: |
-          set -euo pipefail
-          OWNER=$(echo "$GHCR_OWNER" | tr '[:upper:]' '[:lower:]')
-          IMAGE="${{ matrix.image }}"
-          # Namespaced images (e.g. moby/buildkit) use docker.io/<image> directly;
-          # official library images (e.g. node, alpine) use docker.io/library/<image>
-          if [[ "$IMAGE" == */* ]]; then
-            SOURCE="docker.io/${IMAGE}"
-          else
-            SOURCE="docker.io/library/${IMAGE}"
-          fi
-          TARGET="ghcr.io/${OWNER}/base-images/${IMAGE}"
-          FORCE="${{ github.event.inputs.force_mirror || 'false' }}"
-
-          # Retry wrapper — transient HTTP/2 stream errors and registry 5xx
-          # frequently break a single copy. Exponential backoff over 5 attempts.
-          mirror_with_retry() {
-            local src="$1" tgt="$2"
-            local attempts=5 delay=5
-            for attempt in $(seq 1 "$attempts"); do
-              if docker buildx imagetools create -t "$tgt" "$src"; then
-                [[ "$attempt" -gt 1 ]] && echo "Succeeded on attempt ${attempt}"
-                return 0
-              fi
-              if [[ "$attempt" -eq "$attempts" ]]; then
-                echo "::error::mirror failed after ${attempts} attempts: $src -> $tgt"
-                return 1
-              fi
-              echo "::warning::mirror attempt ${attempt} failed — retrying in ${delay}s"
-              sleep "$delay"
-              delay=$(( delay * 2 ))
-            done
-          }
-
-          # Get source digest from Docker Hub
-          SOURCE_DIGEST=""
-          SOURCE_DIGEST=$(docker buildx imagetools inspect "$SOURCE" --raw 2>/dev/null | sha256sum | awk '{print "sha256:"$1}') || true
-
-          if [[ -z "$SOURCE_DIGEST" ]]; then
-            echo "::warning::Could not inspect source $SOURCE — mirroring unconditionally"
-            mirror_with_retry "$SOURCE" "$TARGET"
-            MIRROR_TS=$(date -u '+%Y-%m-%d %H:%M UTC')
-            echo "status=mirrored" >> "$GITHUB_OUTPUT"
-            echo "reason=source-inspect-failed" >> "$GITHUB_OUTPUT"
-            echo "timestamp=$MIRROR_TS" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Get target digest from GHCR (may not exist yet)
-          TARGET_DIGEST=""
-          TARGET_DIGEST=$(docker buildx imagetools inspect "$TARGET" --raw 2>/dev/null | sha256sum | awk '{print "sha256:"$1}') || true
-
-          echo "Source digest: ${SOURCE_DIGEST:0:26}..."
-          if [[ -n "$TARGET_DIGEST" ]]; then
-            echo "Target digest: ${TARGET_DIGEST:0:26}..."
-          else
-            echo "Target digest: <not found>"
-          fi
-
-          if [[ "$FORCE" != "true" && -n "$TARGET_DIGEST" && "$SOURCE_DIGEST" == "$TARGET_DIGEST" ]]; then
-            echo "Already up-to-date — skipping mirror"
-            echo "status=skipped" >> "$GITHUB_OUTPUT"
-            echo "reason=digest-match" >> "$GITHUB_OUTPUT"
-          else
-            REASON="new-image"
-            [[ "$FORCE" == "true" ]] && REASON="force-mirror"
-            [[ -n "$TARGET_DIGEST" && "$SOURCE_DIGEST" != "$TARGET_DIGEST" ]] && REASON="digest-changed"
-
-            echo "Mirroring $SOURCE -> $TARGET (reason: $REASON)"
-            mirror_with_retry "$SOURCE" "$TARGET"
-            MIRROR_TS=$(date -u '+%Y-%m-%d %H:%M UTC')
-            echo "Done: $TARGET at $MIRROR_TS"
-            echo "status=mirrored" >> "$GITHUB_OUTPUT"
-            echo "reason=$REASON" >> "$GITHUB_OUTPUT"
-            echo "timestamp=$MIRROR_TS" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Job summary
-        if: always()
-        run: |
-          STATUS="${{ steps.mirror.outputs.status }}"
-          REASON="${{ steps.mirror.outputs.reason }}"
-          IMAGE="${{ matrix.image }}"
-
-          case "$STATUS" in
-            skipped)  ICON="⏭️"; DESC="Already up-to-date" ;;
-            mirrored) ICON="✅"; DESC="Mirrored ($REASON)" ;;
-            *)        ICON="❌"; DESC="Unknown status" ;;
-          esac
-
-          echo "| $ICON | \`$IMAGE\` | $DESC |" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Write per-image status artifact
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          STATUS="${{ steps.mirror.outputs.status }}"
-          TS="${{ steps.mirror.outputs.timestamp }}"
-          IMAGE="${{ matrix.image }}"
-          [[ -z "$STATUS" ]] && STATUS="unknown"
-          mkdir -p status-out
-          # Sanitize image name for filename: / and : -> __
-          SAFE=$(echo "$IMAGE" | sed 's#[/:]#__#g')
-          printf '%s|%s|%s\n' "$IMAGE" "$STATUS" "$TS" > "status-out/${SAFE}.txt"
-
-      - name: Upload status artifact
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: mirror-status-${{ strategy.job-index }}
-          path: status-out/
-          retention-days: 1
-          if-no-files-found: ignore
-
-  update-readme:
-    name: Update README
-    runs-on: ubuntu-latest
-    needs: [prepare, mirror]
-    if: always()
-    timeout-minutes: 10
+    # One job looping the images, not a job per image: imagetools create is a
+    # registry-side copy, so per-image runners bought nothing and cost ~18x the
+    # job starts and action downloads.
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -230,14 +65,21 @@ jobs:
             printf '%s' "$REG_TOKEN" | docker login ghcr.io \
               --username "$REG_USER" --password-stdin
 
-      - name: Download mirror status artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: mirror-status
-          pattern: mirror-status-*
-          merge-multiple: true
+      # Failures are deferred to the final step so the README still refreshes
+      # when an image fails -- update-readme used to get that from `if: always()`
+      # on a separate job.
+      - name: Mirror images
+        id: mirror
+        continue-on-error: true
+        env:
+          RAW_IMAGES: ${{ vars.BASE_IMAGES || env.DEFAULT_IMAGES }}
+          GHCR_OWNER: ${{ github.repository_owner }}
+          STATUS_DIR: mirror-status
+          FORCE: ${{ github.event.inputs.force_mirror || 'false' }}
+        run: bash .github/scripts/mirror-images.sh
 
       - name: Detect "Used By" from public repos
+        if: always()
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GH_PAT_READ_VARS || github.token }}
@@ -246,8 +88,9 @@ jobs:
         run: bash .github/scripts/detect-used-by.sh
 
       - name: Generate README
+        if: always()
         env:
-          RAW_IMAGES: ${{ needs.prepare.outputs.images_raw }}
+          RAW_IMAGES: ${{ vars.BASE_IMAGES || env.DEFAULT_IMAGES }}
           GHCR_OWNER_RAW: ${{ github.repository_owner }}
           REPO_FULL: ${{ github.repository }}
           STATUS_DIR: mirror-status
@@ -255,6 +98,7 @@ jobs:
         run: bash .github/scripts/generate-readme.sh
 
       - name: Commit and push if changed
+        if: always()
         shell: bash
         env:
           BRANCH: ${{ github.ref_name }}
@@ -287,4 +131,10 @@ jobs:
             sleep "$(( (RANDOM % 4) + 2 ))"
           done
           echo "::error::Failed to push README after ${MAX_ATTEMPTS} attempts"
+          exit 1
+
+      - name: Fail if any image failed to mirror
+        if: always() && steps.mirror.outcome == 'failure'
+        run: |
+          echo "::error::One or more images failed to mirror -- see the Mirror images step"
           exit 1
