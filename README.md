@@ -23,7 +23,7 @@ Avoids Docker Hub pull rate limits by mirroring base images to GHCR, which has u
 | `node:current-alpine` | `ghcr.io/mekayelanik/base-images/node:current-alpine` | linux/amd64,linux/arm64/v8 | context7-mcp-docker | Mirrored | 2026-08-27 21:26 UTC |
 | `node:current-slim` | `ghcr.io/mekayelanik/base-images/node:current-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored | 2026-08-27 18:26 UTC |
 | `node:current-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:current-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | narsil-mcp-docker | Mirrored | 2026-08-27 18:26 UTC |
-| `node:lts-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:lts-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored | 2026-08-27 21:26 UTC |
+| `node:lts-trixie-slim` | `ghcr.io/mekayelanik/base-images/node:lts-trixie-slim` | linux/amd64,linux/arm64/v8 linux/ppc64le,linux/s390x | — | Mirrored | 2026-09-09 21:26 UTC |
 | `python:3-slim` | `ghcr.io/mekayelanik/base-images/python:3-slim` | linux/386,linux/amd64 linux/arm/v5,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | codegraphcontext-mcp-docker | Mirrored | 2026-09-01 23:26 UTC |
 | `python:3.13-alpine` | `ghcr.io/mekayelanik/base-images/python:3.13-alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | semgrep-mcp-docker | Mirrored | 2026-09-02 02:26 UTC |
 | `python:3.14-alpine` | `ghcr.io/mekayelanik/base-images/python:3.14-alpine` | linux/386,linux/amd64 linux/arm/v6,linux/arm/v7 linux/arm64/v8,linux/ppc64le linux/riscv64,linux/s390x | pypi-query-mcp-server-docker | Mirrored | 2026-09-01 23:26 UTC |
